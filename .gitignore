@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# IDE (전체 제외 — 팀원이 각자 IDE 설정을 가짐, 사용자명/절대경로 노출 방지)
+.idea/
+*.iml
+
+# 런타임 데이터 (DB는 init_db에서 자동 생성됨)
+data/
+
+# Claude 로컬 설정
+.claude/
