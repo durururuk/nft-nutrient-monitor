@@ -1,0 +1,328 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --accent: #6366f1;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px;
+  overflow: hidden;
+}
+
+/* ── 헤더 ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: 52px;
+}
+header h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
+.conn-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.conn-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+.conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.conn-dot.disconnected { background: var(--red); }
+
+/* ── 탭 ── */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── 탭 패널 ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: flex; flex-direction: column; }
+
+/* 전체 내용 영역 (헤더 52px + 탭 42px = 94px) */
+#app {
+  height: calc(100vh - 94px);
+  overflow: hidden;
+}
+
+/* ══════════════════════════════
+   모니터 탭
+══════════════════════════════ */
+#panel-monitor {
+  height: 100%;
+  padding: 16px;
+  gap: 14px;
+}
+
+/* 센서 카드 3개 */
+.sensor-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.sensor-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.sensor-label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sensor-value {
+  font-size: 3.2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.sensor-unit {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-left: 3px;
+}
+.sensor-target {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+.badge.normal  { background: #14532d; color: var(--green); }
+.badge.caution { background: #451a03; color: var(--yellow); }
+.badge.danger  { background: #450a0a; color: var(--red); }
+
+/* 차이값 패널 */
+.diff-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.diff-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.diff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+}
+.diff-label { color: var(--text-muted); }
+.diff-value { font-weight: 700; font-size: 1.05rem; }
+.diff-value.ok   { color: var(--green); }
+.diff-value.high { color: var(--red); }
+.diff-value.low  { color: var(--yellow); }
+
+/* 도징 버튼 */
+.dose-btn {
+  width: 100%;
+  padding: 22px;
+  background: var(--accent);
+  border: none;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: 0.03em;
+}
+.dose-btn:active { opacity: 0.8; transform: scale(0.98); }
+.dose-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 도징 피드백 */
+.dose-feedback {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  min-height: 20px;
+}
+
+/* ══════════════════════════════
+   설정 탭
+══════════════════════════════ */
+#panel-settings {
+  height: 100%;
+  padding: 24px 20px;
+  gap: 28px;
+}
+.settings-title {
+  font-size: 1rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.setting-row label {
+  font-size: 1.4rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.setting-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.setting-input {
+  width: 130px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  caret-color: transparent;
+  user-select: none;
+}
+.setting-input:focus { outline: 2px solid var(--accent); }
+.setting-unit { font-size: 1.1rem; color: var(--text-muted); }
+
+/* 숫자 키패드 */
+.keypad-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+.keypad-overlay.open { display: flex; }
+.keypad {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  width: 100%;
+  max-width: 420px;
+}
+.keypad-display {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: right;
+  min-height: 52px;
+}
+.keypad-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.key {
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: center;
+}
+.key:active { background: var(--border); }
+.key.del { color: var(--red); }
+.key.confirm {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+.key.cancel { color: var(--text-muted); }
+
+/* 저장 버튼 */
+.save-btn {
+  width: 100%;
+  padding: 22px;
+  background: var(--green);
+  border: none;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.save-btn:active { opacity: 0.8; }
+.save-feedback {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  min-height: 20px;
+}
+
+.spacer { flex: 1; }

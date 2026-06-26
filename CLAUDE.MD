@@ -1,0 +1,231 @@
+# NFT 배양액 탱크 모니터링 시스템 — Claude Code 작업 컨텍스트
+
+> 이 파일은 Claude Code에서 작업을 이어받기 위한 인수인계 문서입니다.
+
+---
+
+## 프로젝트 개요
+
+상추 수경재배 NFT 시스템의 배양액 탱크 모니터링 및 제어 시스템.
+아두이노에서 EC/pH/온도를 측정 → Raspberry Pi 4B에서 수신 → 웹 대시보드로 표시 → 도징 제어.
+
+---
+
+## 현재 상태 (작업 시작 전 확인)
+
+- [x] 기술 스택 확정
+- [x] 시스템 아키텍처 확정
+- [x] 화면 레이아웃 확정
+- [x] requirements.txt 생성 완료
+- [ ] 코드 작성 시작 전 단계 — **여기서부터 작업**
+
+---
+
+## 기술 스택
+
+| 영역 | 기술 |
+|---|---|
+| 백엔드 프레임워크 | FastAPI + uvicorn |
+| 시리얼 통신 | pyserial-asyncio |
+| 데이터베이스 | SQLite + aiosqlite |
+| 프론트엔드 | Vanilla JS (프레임워크 없음) |
+| 차트 | Chart.js (CDN) |
+| 브라우저 | Chromium 키오스크 모드 |
+| 하드웨어 | Raspberry Pi 4B |
+| 디스플레이 | 8인치 정전식 터치 디스플레이 |
+
+### requirements.txt (확정)
+```
+aiosqlite==0.22.1
+annotated-types==0.7.0
+anyio==4.14.1
+click==8.4.2
+fastapi==0.138.0
+h11==0.16.0
+idna==3.18
+pydantic==2.13.4
+pydantic_core==2.46.4
+pyserial==3.5
+pyserial-asyncio==0.6
+starlette==1.3.1
+typing_extensions==4.15.0
+uvicorn==0.49.0
+```
+
+---
+
+## 시스템 아키텍처
+
+```
+[Arduino]
+    │  UART (Serial, JSON 포맷, 30초 주기)
+    ▼
+[Raspberry Pi 4B - FastAPI 서버 단일 프로세스]
+    ├── Serial Reader (asyncio background task)
+    │     ├── JSON 파싱 및 유효성 검증
+    │     ├── SQLite 저장
+    │     └── WebSocket broadcast
+    ├── REST API
+    │     ├── GET  /api/sensor/latest       현재 센서값
+    │     ├── GET  /api/sensor/history      히스토리
+    │     ├── GET  /api/settings/target     목표값 조회
+    │     ├── POST /api/settings/target     목표값 저장
+    │     └── POST /api/control/dose        도징 명령 (현재 Mock)
+    └── Static 서빙
+          └── GET / → index.html
+
+[Chromium 키오스크 모드]
+    └── localhost:8000 → 웹 대시보드
+          └── 같은 WiFi 내 외부 기기에서도 접근 가능
+```
+
+### 시리얼 데이터 포맷 (아두이노 → RPi)
+```json
+{"ec": 1.85, "ph": 6.2, "temp": 23.4, "ts": 1719123456}
+```
+
+---
+
+## 화면 설계
+
+### 전체 레이아웃
+탭 2개 구조 (단일 페이지, 스크롤 없음, 8인치 기준)
+
+```
+┌─────────────────────────────┐
+│  NFT 배양액 모니터    ● 연결 │  ← 헤더
+├──────────┬──────────────────┤
+│  모니터  │  설정            │  ← 탭
+├──────────┴──────────────────┤
+│  탭 내용                    │
+└─────────────────────────────┘
+```
+
+### [모니터 탭] - 기본 탭
+```
+┌─────────────────────────────┐
+│  EC         pH      Temp    │
+│  1.85       6.2     23.4°C  │  ← 현재값 (WebSocket 실시간)
+│  목표 2.0   목표 6.5   —    │  ← 목표값 표시만
+│  [정상]     [주의]  [정상]  │  ← 상태 뱃지
+├─────────────────────────────┤
+│  EC  현재 1.85 / 목표 2.0   │
+│  → 부족 +0.15 mS/cm         │  ← 차이값 계산 표시
+│  pH  현재 6.2  / 목표 6.5   │
+│  → 부족 +0.3                │
+├─────────────────────────────┤
+│        [ 도징 시작 ]         │  ← 도징 버튼 (현재 Mock)
+└─────────────────────────────┘
+```
+
+### [설정 탭]
+```
+┌─────────────────────────────┐
+│  목표값 설정                 │
+│                             │
+│  EC 목표   [  2.0  ] mS/cm  │  ← 터치 입력 (숫자 키패드)
+│  pH 목표   [  6.5  ]        │  ← 터치 입력 (숫자 키패드)
+│                             │
+│          [ 저장 ]           │
+└─────────────────────────────┘
+```
+
+### 상태 뱃지 색상
+| 상태 | 색상 | 조건 |
+|---|---|---|
+| 정상 | 초록 | 정상 범위 내 |
+| 주의 | 노랑 | 범위 경계 근접 |
+| 위험 | 빨강 | 범위 초과 |
+
+### 센서 정상 범위 (상추 기준)
+| 센서 | 정상 범위 |
+|---|---|
+| EC | 0.5 ~ 3.5 mS/cm |
+| pH | 5.5 ~ 7.5 |
+| Temp | 5.0 ~ 40.0 °C |
+
+---
+
+## 파일 구조 (목표)
+
+```
+nft-monitor/
+├── CLAUDE.md                  # 이 파일
+├── main.py                    # FastAPI 앱 진입점, lifespan
+├── serial_reader.py           # 시리얼 수신 asyncio 태스크
+├── database.py                # SQLite 초기화, 저장, 조회
+├── websocket_manager.py       # WebSocket 연결 관리, broadcast
+├── models.py                  # Pydantic 데이터 모델
+├── routers/
+│   ├── sensor.py              # /api/sensor 라우터
+│   ├── settings.py            # /api/settings 라우터
+│   └── control.py             # /api/control 라우터 (Mock)
+├── config.py                  # 포트, 범위 임계값 등 설정
+├── static/
+│   └── index.html             # 단일 파일 프론트엔드
+├── data/
+│   └── sensor.db              # SQLite DB (자동 생성)
+├── requirements.txt
+└── deploy.sh                  # Mac → RPi 배포 스크립트
+```
+
+---
+
+## 개발 단계 (Phase)
+
+### Phase 1 — 프론트엔드 목업 ← **지금 시작할 것**
+- [ ] `index.html` 탭 레이아웃 구현 (모니터 / 설정)
+- [ ] 더미 데이터로 현재값 카드 표시
+- [ ] 터치 숫자 키패드 입력 구현 (목표값 설정)
+- [ ] 차이값 계산 및 표시 로직 (프론트에서 계산)
+- [ ] 도징 버튼 UI (클릭 시 Mock 응답 표시)
+- [ ] 8인치 터치 디스플레이 기준 CSS 최적화
+
+### Phase 2 — 백엔드 기본
+- [ ] FastAPI 서버 기동
+- [ ] 더미 데이터 생성기 (시리얼 대체)
+- [ ] WebSocket broadcast 구현
+- [ ] SQLite 저장 및 히스토리 API
+- [ ] 목표값 저장/조회 API
+- [ ] 프론트와 연결
+
+### Phase 3 — 시리얼 연동
+- [ ] 아두이노 시리얼 수신 (센서 확정 후)
+- [ ] JSON 파싱 및 유효성 검증
+- [ ] 더미 데이터 → 실제 데이터로 교체
+
+### Phase 4 — 제어 시스템 연동
+- [ ] 도징 Mock → 실제 제어 로직 교체
+- [ ] 교반 모터 제어 API 추가
+- [ ] 키오스크 모드 자동 실행 설정
+
+---
+
+## 배포 방식
+
+- **개발:** Mac (IntelliJ Ultimate)
+- **배포:** rsync + SSH → RPi
+- **실행:** systemd 서비스로 등록
+
+```bash
+# deploy.sh
+rsync -avz --exclude='.git' --exclude='__pycache__' --exclude='venv' \
+  ./ pi@raspberrypi.local:/home/pi/nft-monitor/
+
+ssh pi@raspberrypi.local "cd /home/pi/nft-monitor && \
+  source venv/bin/activate && \
+  pip install -r requirements.txt -q && \
+  sudo systemctl restart nft-monitor"
+```
+
+---
+
+## 미결 사항 (센서 확정 후 결정)
+
+| 항목 | 내용 |
+|---|---|
+| 시리얼 포트 | `/dev/ttyUSB0` or `/dev/ttyACM0` 확인 필요 |
+| 아두이노 전송 주기 | 현재 30초 가정 |
+| 타임스탬프 | 아두이노 ts 없을 경우 RPi 수신 시각 사용 |
+| 온도 보상 | EC/pH 온도 보상 계산 위치 결정 필요 (아두이노 vs RPi) |
+| 도징 알고리즘 | 차이값 → 실제 투입량 계산 로직 미정 |

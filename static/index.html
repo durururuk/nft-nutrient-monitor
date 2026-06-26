@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFT 배양액 모니터</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 헤더 -->
+<header>
+  <h1>NFT 배양액 모니터</h1>
+  <div class="conn-badge">
+    <div class="conn-dot" id="conn-dot"></div>
+    <span id="conn-text">연결 중...</span>
+  </div>
+</header>
+
+<!-- 탭 -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('monitor', this)">모니터</button>
+  <button class="tab-btn" onclick="switchTab('settings', this)">설정</button>
+</div>
+
+<!-- 앱 영역 -->
+<div id="app">
+
+  <!-- ── 모니터 탭 ── -->
+  <div id="panel-monitor" class="tab-panel active">
+    <div class="sensor-cards">
+      <!-- EC -->
+      <div class="sensor-card">
+        <span class="sensor-label">EC</span>
+        <div>
+          <span class="sensor-value" id="val-ec">—</span>
+          <span class="sensor-unit">mS/cm</span>
+        </div>
+        <span class="sensor-target" id="tgt-ec">목표 —</span>
+        <span class="badge" id="badge-ec">—</span>
+      </div>
+      <!-- pH -->
+      <div class="sensor-card">
+        <span class="sensor-label">pH</span>
+        <div>
+          <span class="sensor-value" id="val-ph">—</span>
+        </div>
+        <span class="sensor-target" id="tgt-ph">목표 —</span>
+        <span class="badge" id="badge-ph">—</span>
+      </div>
+      <!-- Temp -->
+      <div class="sensor-card">
+        <span class="sensor-label">온도</span>
+        <div>
+          <span class="sensor-value" id="val-temp">—</span>
+          <span class="sensor-unit">°C</span>
+        </div>
+        <span class="sensor-target">—</span>
+        <span class="badge" id="badge-temp">—</span>
+      </div>
+    </div>
+
+    <!-- 차이값 -->
+    <div class="diff-panel">
+      <span class="diff-title">현재값 vs 목표값</span>
+      <div class="diff-row">
+        <span class="diff-label" id="diff-ec-label">EC  —</span>
+        <span class="diff-value" id="diff-ec-value">—</span>
+      </div>
+      <div class="diff-row">
+        <span class="diff-label" id="diff-ph-label">pH  —</span>
+        <span class="diff-value" id="diff-ph-value">—</span>
+      </div>
+    </div>
+
+    <!-- 도징 버튼 -->
+    <button class="dose-btn" id="dose-btn" onclick="doDose()">도징 시작</button>
+    <div class="dose-feedback" id="dose-feedback"></div>
+  </div>
+
+  <!-- ── 설정 탭 ── -->
+  <div id="panel-settings" class="tab-panel">
+    <span class="settings-title">목표값 설정</span>
+
+    <div class="setting-row">
+      <label>EC 목표</label>
+      <div class="setting-input-wrap">
+        <input class="setting-input" id="input-ec" readonly value="2.0"
+               onclick="openKeypad('EC 목표 (mS/cm)', this.value, 0.1, 5.0, v => this.value = v.toFixed(1))">
+        <span class="setting-unit">mS/cm</span>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <label>pH 목표</label>
+      <div class="setting-input-wrap">
+        <input class="setting-input" id="input-ph" readonly value="6.5"
+               onclick="openKeypad('pH 목표', this.value, 3.0, 10.0, v => this.value = v.toFixed(1))">
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="save-btn" onclick="saveSettings()">저장</button>
+    <div class="save-feedback" id="save-feedback"></div>
+  </div>
+
+</div>
+
+<script src="keypad.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
