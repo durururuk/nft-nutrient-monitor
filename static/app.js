@@ -7,8 +7,8 @@ const state = {
 
 // 센서 정상 범위
 const RANGE = {
-  ec:   { min: 0.5, max: 3.5 },
-  ph:   { min: 5.5, max: 7.5 },
+  ec:   { min: 1.2, max: 2.0 },
+  ph:   { min: 5.5, max: 6.5 },
   temp: { min: 5.0, max: 40.0 },
 };
 
