@@ -24,6 +24,7 @@ from config import DoseCoeffs
 _NEWTON_MAX_ITER = 8
 _NEWTON_TOL = 1e-6
 _DET_EPS = 1e-9
+_PH_TOL = 0.1  # pH 측정 오차 폭 — 이보다 큰 pH 이탈만 안내 대상
 
 
 @dataclass
@@ -119,6 +120,14 @@ def compute_dose(
 
     # ── 1. 데드밴드 / EC 초과 체크 ───────────────────────────────
     if abs(d_ec) <= constraints.ec_deadband:
+        # EC는 목표 도달했지만 pH가 크게 이탈했으면 침묵하지 말고 안내.
+        # (pH만 독립 보정하는 것은 물리적으로 불가 — B는 EC를 함께 올림)
+        if d_ph < -_PH_TOL:  # 현재 pH가 목표보다 높음 → 낮춰야 함
+            notes.append("EC는 목표 도달했으나 pH 높음 — B 투입 시 EC 초과, "
+                         "희석 후 재도징 또는 별도 pH-down 검토")
+        elif d_ph > _PH_TOL:  # 현재 pH가 목표보다 낮음 → 올려야 함
+            notes.append("EC는 목표 도달했으나 pH 낮음 — 양액으로 상향 불가, "
+                         "pH-up(염기) 별도 조치")
         return DoseResult(
             a_ml=0.0, b_ml=0.0,
             status="SKIP",
@@ -168,13 +177,14 @@ def compute_dose(
         xA = 0.0
         xB = d_ec / (c.a_ec_B or _DET_EPS)
         clamped = True
-        notes.append("A액 0 클램프 — EC 기준 B액만으로 조정 (pH 방향이 B 단독 적합)")
+        notes.append("A액 0 클램프 — EC는 B액으로 맞춤 (pH를 낮춰야 해 B 단독이 적합)")
 
     elif xB < 0:
         xB = 0.0
         xA = d_ec / (c.a_ec_A or _DET_EPS)
         clamped = True
-        notes.append("B액 0 클램프 — EC 기준 A액만으로 조정 (pH 방향이 A 단독 적합)")
+        notes.append("B액 0 클램프 — EC는 A액으로 맞춤 "
+                     "(pH는 B로만 하강 가능, 이 경우 B 불필요)")
 
     a_ml = xA * volume_l
     b_ml = xB * volume_l
@@ -194,6 +204,13 @@ def compute_dose(
     if a_ml > constraints.extrapolation_warn_ml or b_ml > constraints.extrapolation_warn_ml:
         notes.append("투입량이 실험 측정 범위를 초과합니다 — 투입 후 재측정 권장")
 
+    # ── 5b. pH 상향 불가 경고 (계수 연동) ────────────────────────
+    # pH를 올려야 하는데(d_ph>0) 두 양액 모두 pH를 못 올리면(계수 ≤ 0)
+    # 양액 투입으로는 도달 불가 — pH-up(염기) 별도 조치가 필요함을 명시.
+    # placeholder 계수(a_ph_A>0)에서는 조용, 실측 계수(a_ph_A≈0) 로드 시 자동 활성.
+    if d_ph > _PH_TOL and c.a_ph_A <= 0 and c.a_ph_B <= 0:
+        notes.append("양액으로 pH 상향 불가 — pH-up(염기) 별도 조치 필요")
+
     # ── 6. 캘리브레이션 경고 ─────────────────────────────────────
     if calibration_pending:
         notes.append("계수 미보정(placeholder) — 실험 완료 후 정밀도 확보됩니다")
@@ -209,12 +226,15 @@ def compute_dose(
         status = status_base
         suffix = ""
 
+    a_ml = round(a_ml, 1) + 0.0  # -0.0 정규화
+    b_ml = round(b_ml, 1) + 0.0
+
     message = (f"A액 {a_ml:.1f}mL + B액 {b_ml:.1f}mL 투입 권장"
                f" (탱크 {volume_l:.0f}L 기준){suffix}")
 
     return DoseResult(
-        a_ml=round(a_ml, 1),
-        b_ml=round(b_ml, 1),
+        a_ml=a_ml,
+        b_ml=b_ml,
         status=status,
         message=message,
         notes=notes,
