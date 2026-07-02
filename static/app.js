@@ -161,41 +161,70 @@ async function saveSettings() {
   setTimeout(() => { fb.textContent = ''; }, 3000);
 }
 
-// ── 도징 ──
+// ── 도징 (순차 폐루프 2단계: ①pH/B → 재측정 → ②EC/A) ──
 let dosing = false;
+let dosePhase = 'ph';   // 'ph' → 다음 클릭은 1단계, 'ec' → 다음 클릭은 2단계
+let lastBml  = 0;       // 1단계에서 권장/투입한 B액(mL) — 2단계 상호작용 보정용
+
+function resetDose(msg, color) {
+  const btn = document.getElementById('dose-btn');
+  const fb  = document.getElementById('dose-feedback');
+  dosePhase = 'ph';
+  lastBml   = 0;
+  btn.textContent = '① pH 도징 (B액)';
+  btn.disabled    = false;
+  dosing          = false;
+  if (msg !== undefined) { fb.style.color = color || ''; fb.textContent = msg; }
+}
+
 async function doDose() {
   if (dosing) return;
   dosing = true;
   const btn = document.getElementById('dose-btn');
   const fb  = document.getElementById('dose-feedback');
+  const phase = dosePhase;
   btn.disabled = true;
   btn.textContent = '처리 중...';
   fb.textContent  = '';
   fb.style.color  = '';
 
+  const url  = phase === 'ph' ? '/api/control/dose/ph' : '/api/control/dose/ec';
+  const body = phase === 'ph'
+    ? { ph: state.sensor.ph, target_ph: state.target.ph }
+    : { ec: state.sensor.ec, target_ec: state.target.ec, b_ml_dosed: lastBml };
+
   try {
-    const r = await fetch('/api/control/dose', {
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ec:        state.sensor.ec,
-        ph:        state.sensor.ph,
-        target_ec: state.target.ec,
-        target_ph: state.target.ph,
-      }),
+      body: JSON.stringify(body),
     });
     const d = await r.json();
     fb.style.color = d.status === 'SKIP' ? 'var(--yellow)' : 'var(--green)';
     fb.textContent = d.message + (d.calibration_pending ? ' [계수 미보정]' : '');
-  } catch (_) {
-    fb.style.color = 'var(--yellow)';
-    fb.textContent = '백엔드 연결 안 됨';
-  }
 
-  btn.textContent = '도징 시작';
-  btn.disabled    = false;
-  dosing          = false;
-  setTimeout(() => { fb.textContent = ''; fb.style.color = ''; }, 5000);
+    if (phase === 'ph') {
+      // 1단계 완료 → 2단계(EC/A) 대기. B 투입·교반·재측정 후 다시 눌러야 함.
+      lastBml   = d.b_ml || 0;
+      dosePhase = 'ec';
+      btn.textContent = '② 재측정 후 EC 도징 (A액)';
+      btn.disabled    = false;
+      dosing          = false;
+    } else {
+      // 2단계 완료 → 사이클 종료. 버튼은 즉시 1단계로 복귀, 피드백만 잠시 유지.
+      dosePhase = 'ph';
+      lastBml   = 0;
+      btn.textContent = '① pH 도징 (B액)';
+      btn.disabled    = false;
+      dosing          = false;
+      const shown = fb.textContent;
+      setTimeout(() => {
+        if (fb.textContent === shown) { fb.textContent = ''; fb.style.color = ''; }
+      }, 5000);
+    }
+  } catch (_) {
+    resetDose('백엔드 연결 안 됨', 'var(--yellow)');
+  }
 }
 
 // ── 더미 데이터 (백엔드 없을 때) ──
