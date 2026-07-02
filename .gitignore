@@ -16,3 +16,6 @@ data/
 
 # Claude 로컬 설정
 .claude/
+
+# 로컬 개발 편의 실행 파일 (Mac 더블클릭 런처)
+run-server.command
