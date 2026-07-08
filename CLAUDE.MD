@@ -13,13 +13,18 @@
 
 ---
 
-## 현재 상태 (작업 시작 전 확인)
+## 현재 상태
 
 - [x] 기술 스택 확정
 - [x] 시스템 아키텍처 확정
 - [x] 화면 레이아웃 확정
 - [x] requirements.txt 생성 완료
-- [ ] 코드 작성 시작 전 단계 — **여기서부터 작업**
+- [x] Phase 1 (프론트엔드 목업) 완료
+- [x] Phase 2 일부 완료 — 목표값 저장/조회 API, 도징 계산 API(dose/ph, dose/ec)
+- [x] 아두이노 스케치(`unoCode/unoV1.ino`) 작성 완료 — EC/pH JSON 전송 + STIR 교반 제어
+- [ ] **다음 작업**: Phase 2 잔여(WebSocket, 센서 히스토리 API, 백엔드 더미 데이터 생성기) 또는 Phase 3(RPi `serial_reader.py`)
+
+> 상세 체크리스트는 아래 "개발 단계(Phase)" 참고.
 
 ---
 
@@ -161,57 +166,68 @@ STOP       즉시 정지
 
 ---
 
-## 파일 구조 (목표)
+## 파일 구조
+
+`✅` = 구현됨, `⏳` = 미구현(계획)
 
 ```
-nft-monitor/
-├── CLAUDE.md                  # 이 파일
-├── main.py                    # FastAPI 앱 진입점, lifespan
-├── serial_reader.py           # 시리얼 수신 asyncio 태스크
-├── database.py                # SQLite 초기화, 저장, 조회
-├── websocket_manager.py       # WebSocket 연결 관리, broadcast
-├── models.py                  # Pydantic 데이터 모델
+nft-tank-measure-display/
+├── CLAUDE.md                  # 이 파일                                    ✅
+├── main.py                    # FastAPI 앱 진입점, lifespan                ✅
+├── serial_reader.py           # 시리얼 수신 asyncio 태스크                  ⏳ Phase 3
+├── database.py                # SQLite 초기화·목표값 저장/조회             ✅ (sensor_logs 테이블은 ⏳)
+├── websocket_manager.py       # WebSocket 연결 관리, broadcast             ⏳ Phase 2 잔여
+├── models.py                  # Pydantic 데이터 모델                       ✅
+├── dosing.py                  # 도징 알고리즘 본체(연립방정식 풀이)         ✅
+├── config.py                  # 탱크 용량·도징 계수·범위 임계값 등 설정      ✅
 ├── routers/
-│   ├── sensor.py              # /api/sensor 라우터
-│   ├── settings.py            # /api/settings 라우터
-│   └── control.py             # /api/control 라우터 (Mock)
-├── config.py                  # 포트, 범위 임계값 등 설정
+│   ├── sensor.py              # /api/sensor 라우터                         ⏳ Phase 2 잔여
+│   ├── settings.py            # /api/settings 라우터 (목표값 저장/조회)     ✅
+│   └── control.py             # /api/control/dose/ph, /dose/ec (계산 전용) ✅
 ├── static/
-│   └── index.html             # 단일 파일 프론트엔드
+│   ├── index.html             # 탭 레이아웃(모니터/설정)                   ✅
+│   ├── app.js                 # 상태 갱신, WS 클라이언트, 더미 fallback     ✅
+│   ├── keypad.js               # 터치 숫자 키패드                          ✅
+│   └── style.css
+├── unoCode/
+│   └── unoV1.ino               # 아두이노: EC/pH JSON 전송 + STIR 교반 제어 ✅
 ├── data/
-│   └── sensor.db              # SQLite DB (자동 생성)
+│   └── sensor.db               # SQLite DB (자동 생성)
 ├── requirements.txt
-└── deploy.sh                  # Mac → RPi 배포 스크립트
+├── deploy.sh / run-server.command  # 배포·로컬 실행 스크립트
+└── docs/                       # 실험 설계서·API 명세·도징 알고리즘 설계 문서
 ```
 
 ---
 
 ## 개발 단계 (Phase)
 
-### Phase 1 — 프론트엔드 목업 ← **지금 시작할 것**
-- [ ] `index.html` 탭 레이아웃 구현 (모니터 / 설정)
-- [ ] 더미 데이터로 현재값 카드 표시
-- [ ] 터치 숫자 키패드 입력 구현 (목표값 설정)
-- [ ] 차이값 계산 및 표시 로직 (프론트에서 계산)
-- [ ] 도징 버튼 UI (클릭 시 Mock 응답 표시)
-- [ ] 8인치 터치 디스플레이 기준 CSS 최적화
+### Phase 1 — 프론트엔드 목업 ✅ 완료
+- [x] `index.html` 탭 레이아웃 구현 (모니터 / 설정)
+- [x] 더미 데이터로 현재값 카드 표시 (`static/app.js injectDummy()`, 백엔드 미연결 시 폴백)
+- [x] 터치 숫자 키패드 입력 구현 (목표값 설정) (`static/keypad.js`)
+- [x] 차이값 계산 및 표시 로직 (프론트에서 계산)
+- [x] 도징 버튼 UI — 순차 2단계(① pH/B액 → 재측정 → ② EC/A액) 로 구현, 실제 계산 API 호출
+- [x] 8인치 터치 디스플레이 기준 CSS 최적화
+- [ ] 잔여: `app.js`의 `state.sensor.temp` / RANGE.temp 등 온도 관련 코드가 아직 남아있음 → 온도 센서 미장착 결정에 맞춰 정리 필요
 
-### Phase 2 — 백엔드 기본
-- [ ] FastAPI 서버 기동
-- [ ] 더미 데이터 생성기 (시리얼 대체)
-- [ ] WebSocket broadcast 구현
-- [ ] SQLite 저장 및 히스토리 API
-- [ ] 목표값 저장/조회 API
-- [ ] 프론트와 연결
+### Phase 2 — 백엔드 기본 (일부 완료)
+- [x] FastAPI 서버 기동 (`main.py`)
+- [x] 목표값 저장/조회 API (`routers/settings.py` + `database.py`)
+- [x] 도징 계산 API — `/api/control/dose/ph`, `/api/control/dose/ec` (`routers/control.py`, `dosing.py`) — 센서값은 아직 요청 body/더미값 기준, DB 연동 전
+- [x] 프론트와 연결 (설정 저장, 도징 버튼)
+- [ ] 더미 데이터 생성기 (시리얼 대체, 백엔드 측) — 현재는 프론트(`app.js`)에서만 더미 생성
+- [ ] WebSocket broadcast 구현 (`websocket_manager.py`, `/ws` 라우트) — 프론트는 이미 연결 시도 중, 백엔드 미구현이라 항상 폴백
+- [ ] SQLite 센서 히스토리 저장/조회 API (`sensor_logs` 테이블, `routers/sensor.py`)
 
 ### Phase 3 — 시리얼 연동
-- [ ] 아두이노 시리얼 수신 (센서 확정 후)
-- [ ] JSON 파싱 및 유효성 검증
-- [ ] 더미 데이터 → 실제 데이터로 교체
+- [x] 아두이노 스케치 작성 완료 (`unoCode/unoV1.ino`) — EC/pH JSON 1초 전송, STIR/STOP 텍스트 명령 수신
+- [ ] RPi `serial_reader.py` — 시리얼 수신·JSON 파싱·유효성 검증·SQLite 저장·WS broadcast
+- [ ] 더미 데이터 → 실제 센서 데이터로 교체 (프론트 폴백 제거는 `serial_reader`+`/ws` 완료 후)
 
 ### Phase 4 — 제어 시스템 연동
-- [ ] 도징 Mock → 실제 제어 로직 교체
-- [ ] 교반 모터 제어 API 추가
+- [ ] 도징 계산 결과로 실제 펌프(A액/B액) 구동 — 현재 `routers/control.py`에 TODO만 존재
+- [ ] 교반 모터 제어 API 추가 (RPi → 아두이노 `STIR:<sec>`/`STOP` 전송) — 아두이노 쪽은 이미 준비됨, RPi API/펌프 연동만 남음
 - [ ] 키오스크 모드 자동 실행 설정
 
 ---
