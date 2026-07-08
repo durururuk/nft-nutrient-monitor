@@ -7,7 +7,9 @@
 ## 프로젝트 개요
 
 상추 수경재배 NFT 시스템의 배양액 탱크 모니터링 및 제어 시스템.
-아두이노에서 EC/pH/온도를 측정 → Raspberry Pi 4B에서 수신 → 웹 대시보드로 표시 → 도징 제어.
+아두이노에서 EC/pH를 측정 → Raspberry Pi 4B에서 수신 → 웹 대시보드로 표시 → 도징 제어.
+
+> 온도 센서는 미장착 상태입니다. 시리얼 포맷·센서 카드 등 온도 관련 항목은 전부 제외합니다.
 
 ---
 
@@ -23,16 +25,16 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|---|---|
-| 백엔드 프레임워크 | FastAPI + uvicorn |
-| 시리얼 통신 | pyserial-asyncio |
-| 데이터베이스 | SQLite + aiosqlite |
-| 프론트엔드 | Vanilla JS (프레임워크 없음) |
-| 차트 | Chart.js (CDN) |
-| 브라우저 | Chromium 키오스크 모드 |
-| 하드웨어 | Raspberry Pi 4B |
-| 디스플레이 | 8인치 정전식 터치 디스플레이 |
+| 영역        | 기술                    |
+|-----------|-----------------------|
+| 백엔드 프레임워크 | FastAPI + uvicorn     |
+| 시리얼 통신    | pyserial-asyncio      |
+| 데이터베이스    | SQLite + aiosqlite    |
+| 프론트엔드     | Vanilla JS (프레임워크 없음) |
+| 차트        | Chart.js (CDN)        |
+| 브라우저      | Chromium 키오스크 모드      |
+| 하드웨어      | Raspberry Pi 4B       |
+| 디스플레이     | 8인치 정전식 터치 디스플레이      |
 
 ### requirements.txt (확정)
 ```
@@ -57,20 +59,22 @@ uvicorn==0.49.0
 ## 시스템 아키텍처
 
 ```
-[Arduino]
-    │  UART (Serial, JSON 포맷, 30초 주기)
+[Arduino Uno — unoCode/unoV1.ino]
+    │  UART (Serial 9600bps, JSON 포맷, 1초 주기)
+    │  ← 명령: STIR:<seconds> / STOP (텍스트, RPi가 프로그램적으로 전송)
     ▼
 [Raspberry Pi 4B - FastAPI 서버 단일 프로세스]
-    ├── Serial Reader (asyncio background task)
+    ├── Serial Reader (asyncio background task) — 미구현 (Phase 3)
     │     ├── JSON 파싱 및 유효성 검증
     │     ├── SQLite 저장
     │     └── WebSocket broadcast
     ├── REST API
-    │     ├── GET  /api/sensor/latest       현재 센서값
-    │     ├── GET  /api/sensor/history      히스토리
-    │     ├── GET  /api/settings/target     목표값 조회
-    │     ├── POST /api/settings/target     목표값 저장
-    │     └── POST /api/control/dose        도징 명령 (현재 Mock)
+    │     ├── GET  /api/sensor/latest       현재 센서값 (예정)
+    │     ├── GET  /api/sensor/history      히스토리 (예정)
+    │     ├── GET  /api/settings/target     목표값 조회 (구현됨)
+    │     ├── POST /api/settings/target     목표값 저장 (구현됨)
+    │     ├── POST /api/control/dose/ph     1단계 B액 도징량 계산 (구현됨, Mock)
+    │     └── POST /api/control/dose/ec     2단계 A액 도징량 계산 (구현됨, Mock)
     └── Static 서빙
           └── GET / → index.html
 
@@ -81,8 +85,20 @@ uvicorn==0.49.0
 
 ### 시리얼 데이터 포맷 (아두이노 → RPi)
 ```json
-{"ec": 1.85, "ph": 6.2, "temp": 23.4, "ts": 1719123456}
+{"ec": 1.85, "ph": 6.2, "stir": 0}
 ```
+- `temp` 필드 없음 — 온도 센서 미장착.
+- `ts` 필드 없음 — Uno에 RTC가 없어 실제 시각을 못 만듦. RPi가 수신 시각을 기록.
+- `stir`: 이 샘플이 측정된 순간 교반 모터가 돌고 있었는지(0/1). 1인 샘플은 전기적 노이즈로
+  흔들릴 수 있으므로 정상치 판정에서 제외 권장.
+
+### 명령 포맷 (RPi → 아두이노)
+```
+STIR:30    30초간 교반 모터 구동 후 자동 정지
+STOP       즉시 정지
+```
+사람이 로그로 보는 방향이 아니라 RPi가 프로그램적으로 생성/전송하는 명령이라 JSON으로
+통일하지 않고 텍스트로 둠 (Uno의 파싱 비용/SRAM 절약). 응답은 `ACK:STIR_START` / `ACK:STIR_STOP`.
 
 ---
 
@@ -104,10 +120,10 @@ uvicorn==0.49.0
 ### [모니터 탭] - 기본 탭
 ```
 ┌─────────────────────────────┐
-│  EC         pH      Temp    │
-│  1.85       6.2     23.4°C  │  ← 현재값 (WebSocket 실시간)
-│  목표 2.0   목표 6.5   —    │  ← 목표값 표시만
-│  [정상]     [주의]  [정상]  │  ← 상태 뱃지
+│  EC              pH         │
+│  1.85            6.2        │  ← 현재값 (WebSocket 실시간)
+│  목표 2.0        목표 6.5   │  ← 목표값 표시만
+│  [정상]          [주의]     │  ← 상태 뱃지
 ├─────────────────────────────┤
 │  EC  현재 1.85 / 목표 2.0   │
 │  → 부족 +0.15 mS/cm         │  ← 차이값 계산 표시
@@ -131,18 +147,17 @@ uvicorn==0.49.0
 ```
 
 ### 상태 뱃지 색상
-| 상태 | 색상 | 조건 |
-|---|---|---|
-| 정상 | 초록 | 정상 범위 내 |
+| 상태 | 색상 | 조건       |
+|----|----|----------|
+| 정상 | 초록 | 정상 범위 내  |
 | 주의 | 노랑 | 범위 경계 근접 |
-| 위험 | 빨강 | 범위 초과 |
+| 위험 | 빨강 | 범위 초과    |
 
 ### 센서 정상 범위 (상추 기준)
-| 센서 | 정상 범위 | 비고 |
-|---|---|---|
+| 센서 | 정상 범위           | 비고         |
+|----|-----------------|------------|
 | EC | 1.2 ~ 2.0 mS/cm | 최적 1.5~1.8 |
-| pH | 5.5 ~ 6.5 | 최적 6.0~6.2 |
-| Temp | 5.0 ~ 40.0 °C | — |
+| pH | 5.5 ~ 6.5       | 최적 6.0~6.2 |
 
 ---
 
@@ -220,12 +235,18 @@ ssh pi@raspberrypi.local "cd /home/pi/nft-monitor && \
 
 ---
 
-## 미결 사항 (센서 확정 후 결정)
+## 미결 사항
 
 | 항목 | 내용 |
 |---|---|
 | 시리얼 포트 | `/dev/ttyUSB0` or `/dev/ttyACM0` 확인 필요 |
-| 아두이노 전송 주기 | 현재 30초 가정 |
-| 타임스탬프 | 아두이노 ts 없을 경우 RPi 수신 시각 사용 |
-| 온도 보상 | EC/pH 온도 보상 계산 위치 결정 필요 (아두이노 vs RPi) |
-| 도징 알고리즘 | 차이값 → 실제 투입량 계산 로직 미정 |
+| 도징 알고리즘 계수 | [설계서 v2](docs/설계서%20v2.md) 실험 완료 전까지 placeholder 값 사용 중 (`config.py DEFAULT_COEFFS`) |
+| RPi `serial_reader.py` | 아직 미구현 (Phase 3) — `unoCode/unoV1.ino`의 JSON(`ec`,`ph`,`stir`) 포맷에 맞춰 파싱해야 함 |
+
+### 결정된 사항 (참고)
+| 항목 | 결정 내용 |
+|---|---|
+| 아두이노 전송 주기 | 1초 (실험 중 값 변화를 빠르게 모니터링하기 위해 30초 대신 1초 유지) |
+| 타임스탬프 | 아두이노는 `ts` 미전송 (RTC 없음) → RPi가 수신 시각을 기준으로 기록 |
+| 온도 센서 | 미장착 확정 — `temp` 필드/온도 보상 로직 전부 제외 |
+| RPi → 아두이노 명령 포맷 | 텍스트(`STIR:30`, `STOP`) — 사람이 보는 로그가 아니므로 JSON 통일 안 함 |
