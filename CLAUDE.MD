@@ -209,7 +209,7 @@ nft-tank-measure-display/
 - [x] 차이값 계산 및 표시 로직 (프론트에서 계산)
 - [x] 도징 버튼 UI — 순차 2단계(① pH/B액 → 재측정 → ② EC/A액) 로 구현, 실제 계산 API 호출
 - [x] 8인치 터치 디스플레이 기준 CSS 최적화
-- [ ] 잔여: `app.js`의 `state.sensor.temp` / RANGE.temp 등 온도 관련 코드가 아직 남아있음 → 온도 센서 미장착 결정에 맞춰 정리 필요
+- [x] 온도 관련 코드 정리 완료 (`index.html` 온도 카드 삭제, `app.js`의 `state.sensor.temp`/`RANGE.temp` 제거, `style.css` 센서 카드 그리드 3열→2열)
 
 ### Phase 2 — 백엔드 기본 (일부 완료)
 - [x] FastAPI 서버 기동 (`main.py`)
