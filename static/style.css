@@ -90,10 +90,10 @@ header h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
   gap: 14px;
 }
 
-/* 센서 카드 3개 */
+/* 센서 카드 2개 (EC, pH) */
 .sensor-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   grid-template-rows: 1fr;
   gap: 12px;
   flex: 1;

@@ -1,15 +1,14 @@
 // ── 상태 ──
 const state = {
-  sensor: { ec: null, ph: null, temp: null },
+  sensor: { ec: null, ph: null },
   target: { ec: 2.0, ph: 6.5 },
   connected: false,
 };
 
 // 센서 정상 범위
 const RANGE = {
-  ec:   { min: 1.2, max: 2.0 },
-  ph:   { min: 5.5, max: 6.5 },
-  temp: { min: 5.0, max: 40.0 },
+  ec: { min: 1.2, max: 2.0 },
+  ph: { min: 5.5, max: 6.5 },
 };
 
 // ── 탭 전환 ──
@@ -72,13 +71,6 @@ function updateMonitor() {
     const dv = document.getElementById('diff-ph-value');
     dv.textContent = d.text; dv.className = 'diff-value ' + d.cls;
   }
-
-  // Temp
-  document.getElementById('val-temp').textContent = fmt(sensor.temp, 1);
-  if (sensor.temp != null) {
-    const b = getBadge('temp', sensor.temp);
-    setBadge('badge-temp', b.cls, b.text);
-  }
 }
 
 // ── 연결 상태 표시 ──
@@ -102,9 +94,8 @@ function connectWS() {
   ws.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data);
-      if (data.ec   != null) state.sensor.ec   = data.ec;
-      if (data.ph   != null) state.sensor.ph   = data.ph;
-      if (data.temp != null) state.sensor.temp = data.temp;
+      if (data.ec != null) state.sensor.ec = data.ec;
+      if (data.ph != null) state.sensor.ph = data.ph;
       updateMonitor();
     } catch (_) {}
   };
@@ -229,9 +220,8 @@ async function doDose() {
 
 // ── 더미 데이터 (백엔드 없을 때) ──
 function injectDummy() {
-  state.sensor.ec   = 1.85 + (Math.random() - 0.5) * 0.1;
-  state.sensor.ph   = 6.2  + (Math.random() - 0.5) * 0.2;
-  state.sensor.temp = 23.4 + (Math.random() - 0.5) * 0.5;
+  state.sensor.ec = 1.85 + (Math.random() - 0.5) * 0.1;
+  state.sensor.ph = 6.2  + (Math.random() - 0.5) * 0.2;
   updateMonitor();
 }
 
