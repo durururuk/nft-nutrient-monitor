@@ -42,14 +42,14 @@ EXTRAPOLATION_WARN_ML: float = 25.0  # 이 이상이면 실험 범위 외 경고
 
 # ── 센서 정상 범위 (상추 기준) ────────────────────────────────────
 SENSOR_RANGE = {
-    "ec":   {"min": 1.2,  "max": 2.0},
-    "ph":   {"min": 5.5,  "max": 6.5},
-    "temp": {"min": 5.0,  "max": 40.0},
+    "ec": {"min": 1.2, "max": 2.0},
+    "ph": {"min": 5.5, "max": 6.8},  # 6.5→6.8: 표준 혼합액 실측 pH 6.58에 여유(±0.2)를 두기 위해 상향
 }
 
 # ── 기본 목표값 ───────────────────────────────────────────────────
-DEFAULT_TARGET_EC: float = 2.0
-DEFAULT_TARGET_PH: float = 6.5
+# 설계서 v2 실험 3(A+B 표준 1배 혼합, 4L 기준) 실측값을 그대로 사용.
+DEFAULT_TARGET_EC: float = 1.634
+DEFAULT_TARGET_PH: float = 6.58
 
 # ── 데이터베이스 ──────────────────────────────────────────────────
 DB_PATH: str = "data/sensor.db"  # data/ 디렉터리는 init_db()에서 자동 생성

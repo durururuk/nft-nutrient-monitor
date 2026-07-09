@@ -8,7 +8,7 @@ const state = {
 // 센서 정상 범위
 const RANGE = {
   ec: { min: 1.2, max: 2.0 },
-  ph: { min: 5.5, max: 6.5 },
+  ph: { min: 5.5, max: 6.8 },
 };
 
 // ── 탭 전환 ──
