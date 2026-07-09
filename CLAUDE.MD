@@ -195,7 +195,8 @@ nft-tank-measure-display/
 │   ├── keypad.js               # 터치 숫자 키패드                          ✅
 │   └── style.css
 ├── unoCode/
-│   └── unoV1.ino               # 아두이노: EC/pH JSON 전송 + STIR 교반 제어 ✅
+│   ├── unoV1.ino                       # 아두이노: EC/pH JSON 전송 + STIR 교반 제어 ✅
+│   └── ph_ec_calibration_tool.ino      # 시리얼 명령으로 EC/pH 보정 계수 산출 (별도 실행) ✅
 ├── data/
 │   └── sensor.db               # SQLite DB (자동 생성)
 ├── requirements.txt
@@ -264,7 +265,6 @@ ssh pi@raspberrypi.local "cd /home/pi/nft-monitor && \
 | 도징 알고리즘 계수 | [설계서 v2](docs/설계서%20v2.md) 실험 완료 전까지 placeholder 값 사용 중 (`config.py DEFAULT_COEFFS`) |
 | RPi `serial_reader.py` | 아직 미구현 (Phase 3) — `unoCode/unoV1.ino`의 JSON(`ec`,`ph`,`stir`) 포맷에 맞춰 파싱해야 함 |
 | EC 온도 보정 | `unoV1.ino`가 `ASSUMED_TEMP_C=25.0` 고정값 사용 중(사실상 no-op) — 온도 센서 도입 시 실측값으로 교체 필요 |
-| `ph_ec_calibration_tool.ino` | 캘리브레이션 실험에 쓴 스케치가 저장소에 없음 — 재현성 위해 `unoCode/`에 추가할지 검토 |
 
 ### 결정된 사항 (참고)
 | 항목 | 결정 내용 |
@@ -275,4 +275,5 @@ ssh pi@raspberrypi.local "cd /home/pi/nft-monitor && \
 | RPi → 아두이노 명령 포맷 | 텍스트(`STIR:30`, `STOP`) — 사람이 보는 로그가 아니므로 JSON 통일 안 함 |
 | 기본 목표값 | EC 1.634 / pH 6.58 — 설계서 v2 실험 3(표준 1배 혼합) 실측값 그대로 사용 |
 | pH 정상범위 상한 | 6.5 → 6.8로 상향 — 표준 혼합액 실측 pH 6.58에 마진(±0.2) 확보 |
-| EC/pH 1차 캘리브레이션 | `ph_ec_calibration_tool.ino` 실험 결과를 `unoV1.ino`의 `rawToEC()`/`rawToPH()`에 반영 (EC 1413uS/cm 1점 보정, pH 4.01/6.86 2점 보정). EC는 uS/cm→mS/cm 변환까지 포함해 반환 |
+| EC/pH 1차 캘리브레이션 | `ph_ec_calibration_tool.ino`(저장소에 함께 보관) 실험 결과를 `unoV1.ino`의 `rawToEC()`/`rawToPH()`에 반영 (EC 1413uS/cm 1점 보정, pH 4.01/6.86 2점 보정). EC는 uS/cm→mS/cm 변환까지 포함해 반환 |
+| EC/pH 핀 배치 | 실측 배선은 **A1=EC, A0=pH** — `unoV1.ino`의 `PIN_EC_SENSOR`/`PIN_PH_SENSOR`를 이에 맞춰 수정 (이전 버전은 반대로 되어 있어 캘리브레이션 계수가 서로 뒤바뀔 뻔함) |

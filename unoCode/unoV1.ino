@@ -36,8 +36,8 @@
 #include <stdlib.h>
 
 // ----- 핀 정의 (실제 배선에 맞게 조정) -----
-const uint8_t PIN_EC_SENSOR   = A0;
-const uint8_t PIN_PH_SENSOR   = A1;
+const uint8_t PIN_EC_SENSOR   = A1;
+const uint8_t PIN_PH_SENSOR   = A0;
 const uint8_t PIN_MOTOR       = 9;    // PWM 가능 핀. 모터 드라이버(EN/IN)에 연결
 
 // 온도 센서 미장착 — EC 온도 보정용 고정 가정값(°C). 실측 수온이 아니므로
