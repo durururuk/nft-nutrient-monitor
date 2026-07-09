@@ -22,8 +22,13 @@
       STIR:30   30초간 교반 시작
       STOP      즉시 정지
 
-  주의: rawToEC(), rawToPH() 는 자리표시자(placeholder) 선형식입니다.
-        실제 값은 프로젝트 1단계 실험(캘리브레이션 곡선/룩업테이블)으로 반드시 교체할 것.
+  주의: rawToEC(), rawToPH() 는 ph_ec_calibration_tool.ino 실험 결과를 반영한 1차 캘리브레이션입니다.
+        - EC: 1413uS/cm 1점 보정(원점통과 가정) + 온도 보정식 포함
+        - PH: 4.01 / 6.86 버퍼 2점 보정
+        EC 온도 보정은 온도 센서가 없어 ASSUMED_TEMP_C(25.0) 고정값을 사용 — 사실상 no-op이며,
+        실제 수온이 25도에서 크게 벗어나면 EC 값이 ±2%/°C 수준으로 오차가 날 수 있음(주석 참고).
+        EC는 1점 보정이라 1413 근처 농도에서는 정확하지만 목표 EC 범위를 벗어난 고농도에서는
+        오차가 커질 수 있음. 표준액 추가 확보되면 재보정 권장(ph_ec_calibration_tool.ino 재사용).
 */
 
 #include <Arduino.h>
@@ -34,6 +39,10 @@
 const uint8_t PIN_EC_SENSOR   = A0;
 const uint8_t PIN_PH_SENSOR   = A1;
 const uint8_t PIN_MOTOR       = 9;    // PWM 가능 핀. 모터 드라이버(EN/IN)에 연결
+
+// 온도 센서 미장착 — EC 온도 보정용 고정 가정값(°C). 실측 수온이 아니므로
+// 25도에서 크게 벗어나면 EC 오차가 커짐(±2%/°C 수준). 필요 시 실측값으로 교체.
+const float ASSUMED_TEMP_C = 25.0;
 
 // ----- 타이밍 설정 -----
 const unsigned long SENSOR_INTERVAL_MS = 1000;  // 센서 전송 주기 (실험 모니터링용으로 1초 유지)
@@ -136,14 +145,22 @@ void handleMotorTimeout() {
 }
 
 // ---------------------------------------------------------------
-// 자리표시자 변환 함수 — 실측 캘리브레이션으로 반드시 교체
+// 변환 함수 — ph_ec_calibration_tool.ino 결과 반영 (1차 캘리브레이션)
+//   EC: 1413uS/cm 1점 보정 (원점통과 가정) + 25도 정규화
+//   PH: 4.01/6.86 2점 보정
+//   주의: EC는 1점 보정이라 1413 근처 농도에서는 정확하지만,
+//         목표 EC 범위를 벗어난 고농도에서는 오차 커질 수 있음.
+//         표준액 추가 확보되면 재보정 권장 (ph_ec_calibration_tool.ino 재사용).
 // ---------------------------------------------------------------
 float rawToEC(int raw) {
   float voltage = raw * (5.0 / 1023.0);
-  return voltage * 1.0;   // TODO: 1단계 실험 캘리브레이션 곡선 적용
+  float ecAtTemp = 4212.23632 * voltage + 0.00000;
+  // ASSUMED_TEMP_C가 25.0 고정이라 분모는 항상 1.0(no-op) — 온도 센서 추가 시 실측값으로 교체
+  float ec25 = ecAtTemp / (1.0 + 0.02 * (ASSUMED_TEMP_C - 25.0));
+  return ec25 / 1000.0;  // uS/cm -> mS/cm (config.py/CLAUDE.md 단위와 일치)
 }
 
 float rawToPH(int raw) {
   float voltage = raw * (5.0 / 1023.0);
-  return 7.0 - ((voltage - 2.5) * 3.5);  // TODO: 실제 pH 프로브 보정식으로 교체
+  return 30.85159 * voltage + (-56.10985);
 }
