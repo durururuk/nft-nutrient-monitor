@@ -275,5 +275,5 @@ ssh pi@raspberrypi.local "cd /home/pi/nft-monitor && \
 | RPi → 아두이노 명령 포맷 | 텍스트(`STIR:30`, `STOP`) — 사람이 보는 로그가 아니므로 JSON 통일 안 함 |
 | 기본 목표값 | EC 1.634 / pH 6.58 — 설계서 v2 실험 3(표준 1배 혼합) 실측값 그대로 사용 |
 | pH 정상범위 상한 | 6.5 → 6.8로 상향 — 표준 혼합액 실측 pH 6.58에 마진(±0.2) 확보 |
-| EC/pH 1차 캘리브레이션 | `ph_ec_calibration_tool.ino`(저장소에 함께 보관) 실험 결과를 `unoV1.ino`의 `rawToEC()`/`rawToPH()`에 반영 (EC 1413uS/cm 1점 보정, pH 4.01/6.86 2점 보정). EC는 uS/cm→mS/cm 변환까지 포함해 반환 |
+| EC/pH 캘리브레이션 | `unoV1.ino`의 `rawToEC()`/`rawToPH()`에 실측 계수 반영. **EC**: 휴대용 수질측정기 기준 4점 선형회귀(739~1557uS/cm, R²≈0.998, `5378.748·V+142.854`) — uS/cm→mS/cm 변환 포함. **pH**: 4.01/6.86 버퍼 2점 보정(`ph_ec_calibration_tool.ino`). 양액 측정값은 pH 범위가 좁아(±0.1 정밀도에 묻힘) pH 보정엔 못 쓰므로 버퍼 필수 |
 | EC/pH 핀 배치 | 실측 배선은 **A1=EC, A0=pH** — `unoV1.ino`의 `PIN_EC_SENSOR`/`PIN_PH_SENSOR`를 이에 맞춰 수정 (이전 버전은 반대로 되어 있어 캘리브레이션 계수가 서로 뒤바뀔 뻔함) |
