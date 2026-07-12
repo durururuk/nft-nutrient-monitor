@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 
 import database
@@ -19,9 +19,11 @@ app = FastAPI(title="NFT 배양액 모니터", lifespan=lifespan)
 app.include_router(control.router)
 app.include_router(settings.router)
 
-# Phase 2에서 추가 예정:
-# - WebSocket router
-# - /api/sensor 라우터
+# Phase 2에서 실제 broadcast로 교체 예정
+@app.websocket("/ws")
+async def ws_placeholder(websocket: WebSocket):
+    await websocket.accept()
+    await websocket.close()
 
 # StaticFiles는 catch-all 마운트이므로 반드시 API 라우터 등록 이후에 마운트한다.
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
